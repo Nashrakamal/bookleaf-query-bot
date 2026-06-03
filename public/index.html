@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BookLeaf — Author Query Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#D85A30;--red-light:#FAECE7;--red-mid:#F0997B;
+  --bg:#FAFAF8;--surface:#FFFFFF;--border:#E8E6E0;
+  --text:#1C1B18;--muted:#6B6A65;--hint:#A09F9B;
+  --green:#3B6D11;--green-bg:#EAF3DE;
+  --amber:#854F0B;--amber-bg:#FAEEDA;
+  --blue:#185FA5;--blue-bg:#E6F1FB;
+  --radius:12px;--sm-radius:8px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+
+.shell{width:880px;max-width:100%;display:grid;grid-template-columns:260px 1fr;gap:0;background:var(--surface);border-radius:20px;border:1px solid var(--border);overflow:hidden;height:680px;box-shadow:0 8px 40px rgba(0,0,0,0.07)}
+
+/* ── Sidebar ── */
+.sidebar{background:#1C1B18;display:flex;flex-direction:column;color:white;border-right:1px solid rgba(255,255,255,0.08)}
+.sb-header{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sb-logo{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.logo-mark{width:34px;height:34px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:white;letter-spacing:-0.5px}
+.sb-brand{font-size:13px;font-weight:500;color:rgba(255,255,255,0.9)}
+.sb-brand span{display:block;font-size:10px;color:rgba(255,255,255,0.4);font-weight:400}
+.sb-status{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)}
+.dot{width:6px;height:6px;background:#4ade80;border-radius:50%}
+
+.sb-section{padding:14px 18px 0}
+.sb-label{font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+
+.author-card{background:rgba(255,255,255,0.05);border-radius:var(--sm-radius);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:background .15s;border:1px solid transparent}
+.author-card:hover{background:rgba(255,255,255,0.09)}
+.author-card.active{background:rgba(216,90,48,0.15);border-color:rgba(216,90,48,0.3)}
+.ac-name{font-size:12px;font-weight:500;color:rgba(255,255,255,0.85)}
+.ac-book{font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;margin-top:4px}
+.live{background:rgba(59,109,17,0.3);color:#86efac}
+.processing{background:rgba(186,117,23,0.3);color:#fcd34d}
+
+.sb-footer{margin-top:auto;padding:14px 18px;border-top:1px solid rgba(255,255,255,0.08);font-size:11px;color:rgba(255,255,255,0.3)}
+
+/* ── Main Chat ── */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.main-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.avatar-ring{width:36px;height:36px;border-radius:50%;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--red)}
+.header-meta h2{font-size:14px;font-weight:500;color:var(--text)}
+.header-meta p{font-size:11px;color:var(--muted)}
+.header-actions{margin-left:auto;display:flex;gap:8px}
+.ha-btn{padding:5px 10px;border:1px solid var(--border);background:transparent;border-radius:6px;font-size:11px;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.ha-btn:hover{background:var(--bg);color:var(--text)}
+.ha-btn.active{background:var(--red-light);border-color:var(--red-mid);color:var(--red)}
+
+.messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+.messages::-webkit-scrollbar{width:4px}
+.messages::-webkit-scrollbar-track{background:transparent}
+.messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.msg{display:flex;gap:8px;align-items:flex-end;max-width:85%}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg-av{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+.bot-av{background:var(--red-light);color:var(--red)}
+.user-av{background:#1C1B18;color:white}
+
+.bubble{padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.6;position:relative}
+.msg.bot .bubble{background:var(--surface);border:1px solid var(--border);border-radius:4px 16px 16px 16px}
+.msg.user .bubble{background:var(--red);color:white;border-radius:16px 4px 16px 16px}
+.bubble strong{font-weight:500}
+
+.meta-line{font-size:10px;color:var(--hint);margin-top:4px;padding:0 4px}
+.conf-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500}
+.conf-high{background:var(--green-bg);color:var(--green)}
+.conf-mid{background:var(--amber-bg);color:var(--amber)}
+.conf-low{background:#FCEBEB;color:#A32D2D}
+
+.escalate-notice{margin-top:8px;padding:8px 10px;background:var(--amber-bg);border-radius:8px;font-size:11px;color:var(--amber);display:flex;align-items:center;gap:6px;border-left:3px solid #FAC775}
+
+.typing-bubble{display:flex;align-items:center;gap:4px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px 16px 16px 16px}
+.typing-dot{width:5px;height:5px;background:var(--hint);border-radius:50%;animation:td 1.2s infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+
+/* ── Input ── */
+.input-area{padding:12px 16px;border-top:1px solid var(--border);background:var(--surface)}
+.quick-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.chip{padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.chip:hover{background:var(--red-light);border-color:var(--red-mid);color:var(--red)}
+
+.input-row{display:flex;gap:8px;align-items:center}
+.input-row input{flex:1;padding:9px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--sm-radius);font-size:13px;color:var(--text);outline:none;font-family:'DM Sans',sans-serif;transition:border .15s}
+.input-row input:focus{border-color:var(--red-mid);background:white}
+.input-row input::placeholder{color:var(--hint)}
+.send{width:36px;height:36px;background:var(--red);border:none;border-radius:var(--sm-radius);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .15s;flex-shrink:0}
+.send:hover{opacity:0.85}
+.send:disabled{opacity:0.4;cursor:not-allowed}
+.send svg{width:15px;height:15px;fill:white}
+
+/* ── DB/Log view ── */
+.data-view{display:none;flex:1;overflow:auto;padding:20px}
+.dv-title{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 10px;background:var(--bg);color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);font-size:11px}
+td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top;line-height:1.4}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;margin:1px}
+.p-green{background:var(--green-bg);color:var(--green)}
+.p-amber{background:var(--amber-bg);color:var(--amber)}
+.p-red{background:#FCEBEB;color:#A32D2D}
+.p-blue{background:var(--blue-bg);color:var(--blue)}
+.p-gray{background:#F1EFE8;color:#5F5E5A}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo">
+        <div class="logo-mark">BL</div>
+        <div class="sb-brand">BookLeaf Publishing<span>Author Support Bot</span></div>
+      </div>
+      <div class="sb-status"><div class="dot"></div> AI Online · Mock DB Connected</div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Author Profiles</div>
+      <div id="author-list"></div>
+    </div>
+
+    <div class="sb-footer">v1.0 · BookLeaf Technical Assignment</div>
+  </div>
+
+  <!-- Main Panel -->
+  <div class="main">
+    <div class="main-header">
+      <div class="avatar-ring" id="h-avatar">P</div>
+      <div class="header-meta">
+        <h2 id="h-name">Priya Sharma</h2>
+        <p id="h-book">Echoes of Dawn</p>
+      </div>
+      <div class="header-actions">
+        <button class="ha-btn active" onclick="showView('chat')">Chat</button>
+        <button class="ha-btn" onclick="showView('db')">DB</button>
+        <button class="ha-btn" onclick="showView('log')">Log</button>
+      </div>
+    </div>
+
+    <div id="chat-panel" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="messages" id="messages"></div>
+      <div class="input-area">
+        <div class="quick-chips" id="chips">
+          <span class="chip" onclick="ask('Is my book live yet?')">Is my book live?</span>
+          <span class="chip" onclick="ask('When will I get my royalty?')">Royalty status</span>
+          <span class="chip" onclick="ask('What is my ISBN number?')">My ISBN</span>
+          <span class="chip" onclick="ask('Check my Bestseller Package status')">Add-on status</span>
+          <span class="chip" onclick="ask('Where is my author copy?')">Author copy</span>
+          <span class="chip" onclick="ask('When was my manuscript submitted?')">Timeline</span>
+        </div>
+        <div class="input-row">
+          <input id="q" placeholder="Type your question or try a chip above…" onkeydown="if(event.key==='Enter')send()"/>
+          <button class="send" id="sendbtn" onclick="send()" aria-label="Send">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="db-panel" class="data-view">
+      <div class="dv-title">Mock Supabase — author_status table (5 records)</div>
+      <table>
+        <thead><tr><th>Email</th><th>Book Title</th><th>ISBN</th><th>Submitted</th><th>Live Date</th><th>Royalty</th><th>Add-ons</th></tr></thead>
+        <tbody id="db-body"></tbody>
+      </table>
+    </div>
+
+    <div id="log-panel" class="data-view">
+      <div class="dv-title">Query Log — <span id="log-count">0</span> queries</div>
+      <table>
+        <thead><tr><th>Time</th><th>Query</th><th>Intent</th><th>Confidence</th><th>Escalated</th></tr></thead>
+        <tbody id="log-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const DB = [
+  {id:"auth_001",email:"priya.sharma@gmail.com",name:"Priya Sharma",book_title:"Echoes of Dawn",isbn:"978-93-5698-112-4",final_submission_date:"2024-11-10",book_live_date:"2025-01-20",royalty_status:"Paid",royalty_amount:"₹4,200",royalty_period:"Q4 2024",add_on_services:["Bestseller Package","PR Campaign"],author_copy_status:"Dispatched on 2025-01-25",publishing_stage:"Live"},
+  {id:"auth_002",email:"rahul.verma@outlook.com",name:"Rahul Verma",book_title:"The Last Monsoon",isbn:"978-93-5698-113-1",final_submission_date:"2025-01-05",book_live_date:"2025-03-01",royalty_status:"Pending",royalty_amount:null,royalty_period:"Q1 2025",add_on_services:["Award Submission"],author_copy_status:"Not yet dispatched",publishing_stage:"Live"},
+  {id:"auth_003",email:"ananya.k@yahoo.com",name:"Ananya K.",book_title:"Between Two Rivers",isbn:"978-93-5698-114-8",final_submission_date:"2024-12-20",book_live_date:"Processing",royalty_status:"Not Generated",royalty_amount:null,royalty_period:null,add_on_services:[],author_copy_status:"Will be dispatched after go-live",publishing_stage:"Processing"},
+  {id:"auth_004",email:"deepak.nair@gmail.com",name:"Deepak Nair",book_title:"Shadows & Silence",isbn:"978-93-5698-115-5",final_submission_date:"2025-02-14",book_live_date:"2025-04-30",royalty_status:"Paid",royalty_amount:"₹2,800",royalty_period:"Q1 2025",add_on_services:["Bestseller Package"],author_copy_status:"Dispatched on 2025-05-03",publishing_stage:"Live"},
+  {id:"auth_005",email:"sara.johnson@xyz.com",name:"Sara Johnson",book_title:"Petals in the Wind",isbn:"978-93-5698-116-2",final_submission_date:"2025-03-01",book_live_date:"Processing",royalty_status:"Under Review",royalty_amount:null,royalty_period:null,add_on_services:["PR Campaign","Award Submission"],author_copy_status:"Not yet dispatched",publishing_stage:"Processing"},
+];
+
+const KB = [
+  // Getting Started / Challenge
+  {kw:["join","21 day","writing challenge","sign up","register","how to join"],ans:"To join the 21-Day Writing Challenge: Register at https://www.bookleafpub.in/writing-challenge and pay a one-time fee of ₹1999. This includes full book publishing (paperback + eBook), ISBN, cover design tool, layout, and author support. No hidden charges."},
+  {kw:["1999","what's included","package includes","publishing package","what do i get"],ans:"The ₹1999 package includes: 21-day challenge participation, paperback + eBook publishing, ISBN & barcode, interior layout, cover design tool, 80% royalty, one free author copy (India), and promotional materials. No hidden charges."},
+  {kw:["genuine","real","legit","scam","trust","authentic","shark tank"],ans:"BookLeaf is 100% legitimate. They've published 16,000+ books, worked with 14,000+ authors, and featured on Shark Tank India Season 4. A highlight: 'Roots' by Rini Choudhury was launched at Rashtrapati Bhavan."},
+  {kw:["pen name","pseudonym","fake name","alias"],ans:"Yes, you can use a pen name throughout the challenge and publishing process. If using a pen name for copyright registration, a notarized affidavit may be required — BookLeaf's team will guide you."},
+  {kw:["without challenge","not interested in poetry","other genres","standalone book","just publish"],ans:"Currently BookLeaf exclusively offers the 21-Day Poetry Writing Challenge. Publishing for other genres is temporarily unavailable. Register at https://www.bookleafpub.in/writing-challenge"},
+  {kw:["language","hindi","hinglish","regional","urdu","marathi","bengali","kannada","tamil"],ans:"Accepted languages: English, Hindi, and Hinglish. Regional languages like Urdu, Marathi, Bengali etc. are not supported yet. For Hindi poems, use Google Input Tools or type elsewhere and copy-paste into the dashboard."},
+  {kw:["age","minimum age","who can join","eligibility"],ans:"There is no minimum or maximum age requirement. Writers of all ages are welcome to participate."},
+  {kw:["co-author","writing partner","collaborate","two authors"],ans:"The challenge is designed for individual authors. Co-authorship is not a standard feature — contact support@bookleafpub.com to discuss your specific case."},
+  {kw:["participate again","second time","already published","join again","returning"],ans:"Yes! Returning authors can join again — there's no limit on participation. If using the same email, your old dashboard remains active. Contact support to enable 'Add a New Book' on your dashboard."},
+  // Refunds & Payments
+  {kw:["refund","money back","cancel","change my mind","14 days","unconditional"],ans:"BookLeaf offers a no-questions-asked unconditional refund within 14 days of registration — even if you've already submitted poems. Refunds are NOT applicable after the 14-day window."},
+  {kw:["can't finish","21 days","extra time","extension","deadline"],ans:"If you can't finish in 21 days, you automatically get a 7-day extension. Note: failing to complete the challenge does not make you eligible for a refund of the registration fee."},
+  // Add-on Services & Pricing
+  {kw:["add-on","addon","upgrade","services","expert publishing"],ans:"BookLeaf offers 4 add-on services:\n1. Global Distribution — ₹5,499 (Amazon 13 markets + Barnes & Noble + Ingram)\n2. Emily Dickinson Award — ₹4,499\n3. Global Dist + Award + Copyright — ₹8,899\n4. Bestseller Breakthrough Package — ₹11,999 (all-inclusive premium)"},
+  {kw:["bestseller breakthrough","11999","premium package","bestseller package"],ans:"The Bestseller Breakthrough Package (₹11,999) includes: Personal Publishing Manager, Priority Publishing (18–22 days), Global Amazon distribution, Flipkart, Barnes & Noble, Ingram, 100% royalty, on-demand royalty payout, copyright registration, 5 author copies (India), Amazon Prime placement, Emily Dickinson Award, and marketing guides."},
+  {kw:["emily dickinson award","award","4499","trophy","certificate"],ans:"The 21st Century Emily Dickinson Award (₹4,499) recognizes outstanding poetic contributions. Includes trophy + certificate shipped to your address, promotion, and enhanced visibility. Dispatched 45–60 business days after your book goes live."},
+  {kw:["global distribution","5499","8899","international","amazon all markets","barnes"],ans:"Global Distribution (₹5,499) lists your paperback on all 13 Amazon marketplaces, Barnes & Noble, and Ingram (30,000+ stores/libraries). The ₹8,899 bundle adds the Emily Dickinson Award + Copyright Registration."},
+  {kw:["copyright registration","register copyright","ip protection","intellectual property registration"],ans:"Copyright Registration is included in the ₹8,899 bundle and Bestseller Breakthrough Package. BookLeaf files on your behalf via the Indian Copyright Office. The government review takes 6–9 months, but your work is legally protected from the day of filing."},
+  // Dashboard & Login
+  {kw:["login details","didn't receive","credentials","no email","login not received"],ans:"Login credentials are emailed within 2 minutes of successful payment. Check your Spam/Junk folder. If still missing, raise a ticket at: https://bookleafpublishing.freshdesk.com/support/tickets/new"},
+  {kw:["forgot password","reset password","can't login","cannot login"],ans:"Visit https://dashboard.bookleafpub.in → click 'Forgot Password' → enter your registered email → use the reset code sent to you. Issues? Raise a ticket at https://bookleafpublishing.freshdesk.com/support/tickets/new"},
+  {kw:["tutorial","video","how to use dashboard","guide","navigate dashboard"],ans:"Watch the dashboard tutorial video here: https://youtu.be/Z9wxMeo624k — it covers navigation, poem submission, and common tips."},
+  // Poem Submission
+  {kw:["submit poems","how to submit","upload poems","add poems","minimum poems"],ans:"Minimum 18 poems required. No upper limit. Go to Dashboard → Book Interior → click 'Add' for each poem → click 'Save as Draft' after each. You can submit all at once or over multiple days. Note: image uploads are not supported — text only."},
+  {kw:["save progress","auto save","lost work","save draft"],ans:"Click 'Save as Draft' after each poem entry. The platform does not auto-save — always save manually after each poem to avoid losing work."},
+  {kw:["rearrange","reorder","order poems","sequence","arrange poems"],ans:"The dashboard does NOT support drag-and-drop reordering. To change poem order, delete all entries and re-upload in the desired sequence. Plan your order before submitting."},
+  {kw:["acknowledgement","dedication","preface","blank pages"],ans:"Acknowledgement, Dedication, and Preface sections are mandatory and cannot be removed or renamed. If left empty, they'll appear as blank pages. Write at least a brief note in each."},
+  {kw:["preview","finalize","finish submission","preview and finish"],ans:"Once done: click 'Preview and Finish' → review how your book looks in print → click 'Save and Continue' to proceed, or 'Back to Book Interior' to edit. You can still edit after preview by clicking 'Previous Step'."},
+  // Cover Design
+  {kw:["cover design","cover creator","front cover","background","template","design cover"],ans:"Go to Dashboard → Cover Design → Background → Front to browse templates or upload a custom design (must be exactly 5×8 inches). Use a PC/laptop — mobile browsers are not supported for cover design."},
+  {kw:["upload cover","custom cover","own cover","my own design"],ans:"Yes! Go to Cover Design → Background → Front → 'Click to upload an image'. Your custom cover must be exactly 5×8 inches. You can use your own fonts, colors, and layout."},
+  {kw:["back cover","author bio","about author","back page","about the book"],ans:"Go to Cover Design → Text → Back. Add 'About the Book' (up to 60 words) and 'About the Author' (up to 60 words). Custom back cover image upload is not supported — only text and solid color backgrounds."},
+  {kw:["profile photo","author photo","picture","author image"],ans:"In the Back Cover section, click 'Add Author Image' and upload your photo. Once uploaded, it cannot be removed — only replaced. If no image is uploaded, no placeholder appears in print."},
+  // Publishing Timeline & Distribution
+  {kw:["how long","publishing timeline","30 days","45 days","when will book be published","in review"],ans:"Standard publishing: 30–45 business days after final submission. With Bestseller Breakthrough Package: 18–22 business days. During this time, your dashboard shows 'In Review'. You'll get an email + dashboard notification when published."},
+  {kw:["where available","platforms","online stores","bookstores","offline"],ans:"Default (no add-on): Paperback + eBook on BookLeaf's online store only. With Global Distribution/Bestseller Package: All 13 Amazon markets, Barnes & Noble, and Ingram (30,000+ stores). Books are NOT available in physical offline retail stores."},
+  {kw:["ebook","e-book","kindle","kdp","digital"],ans:"Your eBook is exclusively sold on BookLeaf's online bookstore. It is NOT listed on Amazon Kindle or other third-party platforms. KDP dual-listing using BookLeaf's ISBN is not allowed."},
+  {kw:["book quality","paper quality","gsm","cover quality","print quality"],ans:"Cover: 230 GSM premium-grade material. Interior pages: 75 GSM high-quality paper. Books are lightweight, reader-friendly, and professionally finished."},
+  // Royalties
+  {kw:["royalty rate","how much royalty","80%","80 percent","earn per copy"],ans:"You earn 80% of the profit (not 80% of the listed price). Example: Book listed at ₹150 → after printing, Amazon fees, GST (~₹85 deductions) → profit ~₹65 → your royalty = 80% of ₹65 = ₹52. Use the calculator: https://www.bookleafpub.in/printing-cost-royalty-calculator"},
+  {kw:["100% royalty","100 percent","bestseller royalty","full royalty"],ans:"With the Bestseller Breakthrough Package you get 100% of the profit. Example: Book at ₹150 → deductions ~₹60 → you get ₹90. Use the calculator: https://www.bookleafpub.in/printing-cost-royalty-calculator"},
+  {kw:["royalty report","sales report","check sales","view sales","when royalty report"],ans:"Check sales at: https://ebooks.bookleafpub.com/sales-reports — enter your ISBN. Reports update monthly after the 15th. First report available 45–60 business days after your book goes live."},
+  {kw:["royalty payment","when paid","threshold","minimum","claim royalty","transfer"],ans:"Minimum threshold: ₹2,000 (Indian authors) or $100 (international). Once crossed, inform BookLeaf via helpdesk → they send a Razorpay payout link to your email → enter UPI/bank details. Bestseller Breakthrough authors can request payout anytime after 30 business days of going live."},
+  // Author Copy
+  {kw:["author copy","free copy","coupon code","physical book","my copy"],ans:"After publication, you'll receive an email asking for a review. Once you submit the review, a coupon code is emailed within 10 business days. Use it on BookLeaf's store to order your free paperback copy. Bestseller Breakthrough Package authors get 5 copies shipped directly. International authors are not eligible for a free copy."},
+  {kw:["bulk order","more copies","extra copies","order more"],ans:"To order bulk copies at printing cost: fill the form at https://docs.google.com/forms/d/e/1FAIpQLSeosYqrgnuZIWjbxikzijjk3-3AvRmlEFQgL821vi8sUbTXBw/viewform — BookLeaf will share a custom payment link. Delivery in 30–45 business days."},
+  {kw:["delivery charge","shipping charge","courier fee","prime delivery"],ans:"Author copy shipping is usually free, but minimal charges may apply for remote locations. Amazon Prime shipping charges on BookLeaf books are controlled by Amazon (POD products) — BookLeaf cannot waive them."},
+  // Technical
+  {kw:["dashboard not working","not loading","portal issue","technical","broken","error"],ans:"Try: 1) Clear browser cache, 2) Use Chrome or Firefox on a PC/laptop (mobile not supported for cover design), 3) If issue persists, raise a ticket at https://bookleafpublishing.freshdesk.com/support/tickets/new with a screenshot."},
+  {kw:["amazon out of stock","unavailable amazon","not showing","amazon listing"],ans:"'Out of Stock' or 'Currently Unavailable' on Amazon is a common sync delay — usually resolves in 24–48 hours. If it persists beyond 48 hours, raise a support ticket."},
+  {kw:["publishing certificate","certificate"],ans:"Request your publishing certificate at: https://docs.google.com/forms/d/e/1FAIpQLSc2q8Npy9bO3zpDuQKiupQP3ALNp_oYDjiEW7I46iSAF9Z64Q/viewform"},
+  {kw:["post publishing changes","edit after publish","change after published"],ans:"Post-Publishing Changes service costs ₹2,150 (India) / $30 (international). After purchase, BookLeaf begins updates within 4–5 business days and re-initiates the publishing process with your revised version."},
+  {kw:["copyright","rights","ownership","who owns","protect poems"],ans:"You retain 100% ownership and copyright of all your content. BookLeaf only acts as publishing partner with non-exclusive distribution rights. All team members sign confidentiality agreements. Poems are never shared or reused without your written consent."},
+  {kw:["publishing consultant","personal manager","consultant not responding"],ans:"With the Bestseller Breakthrough Package, a Publishing Consultant contacts you within 5–7 business days of final submission via email. If no response after 7 days, raise a support ticket. If consultant is unresponsive, escalate via support — they guarantee a response within 48 hours."},
+];
+
+function searchKB(q){
+  const l=q.toLowerCase();
+  let best=null,score=0;
+  for(const item of KB){
+    const s=item.kw.filter(k=>l.includes(k)).length;
+    if(s>score){score=s;best=item;}
+  }
+  return score>0?best:null;
+}
+
+const INTENTS = {
+  book_live:{kw:["live","published","available","launch","amazon","book out","go live","when will"],label:"book_live"},
+  royalty:{kw:["royalt","payment","paid","earn","money","income","revenue","report"],label:"royalty"},
+  isbn:{kw:["isbn","barcode","book number"],label:"isbn"},
+  addon:{kw:["bestseller","pr campaign","award","add-on","addon","package","campaign"],label:"addon"},
+  author_copy:{kw:["copy","copies","physical","dispatch","shipping","courier","deliver"],label:"author_copy"},
+  submission:{kw:["submit","submission","final","manuscript","timeline","upload"],label:"submission"},
+  dashboard:{kw:["dashboard","login","access","portal","password","account"],label:"dashboard"},
+  book_sales:{kw:["sales","sold","units","copies sold","performance"],label:"book_sales"},
+};
+
+const LOGS = [];
+let activeAuthor = DB[0];
+
+function classify(q){
+  const l=q.toLowerCase();
+  let best="general",score=0;
+  for(const[k,v]of Object.entries(INTENTS)){
+    const s=v.kw.filter(w=>l.includes(w)).length;
+    if(s>score){score=s;best=k;}
+  }
+  const conf=score===0?0.4:Math.min(0.5+score*0.2,0.97);
+  return{intent:best,confidence:conf};
+}
+
+function respond(intent,conf,author){
+  if(!author)return"I couldn't find your account. Please share your registered email address or visit support@bookleafpub.com.";
+  const r=author;
+  if(conf<0.8)return`I'm not fully sure I understood (${Math.round(conf*100)}% confidence). I've escalated this to our support team — they'll respond within 24 hours. You can also email support@bookleafpub.com.`;
+  switch(intent){
+    case"book_live":return r.book_live_date==="Processing"?`Your book <strong>"${r.book_title}"</strong> is currently being processed. Based on your submission date (${r.final_submission_date}), the typical timeline is 6–8 weeks. We'll email you when it goes live!`:`🎉 Your book <strong>"${r.book_title}"</strong> went live on <strong>${r.book_live_date}</strong>. It's available on Amazon, Flipkart & Google Books.<br>ISBN: <code>${r.isbn}</code>`;
+    case"royalty":if(r.royalty_status==="Paid")return`Your royalty for <strong>"${r.book_title}"</strong> is <strong>paid</strong>!<br>💰 Amount: <strong>${r.royalty_amount}</strong><br>📅 Period: ${r.royalty_period}<br>Detailed breakdown available at dashboard.bookleafpub.com`;
+      if(r.royalty_status==="Pending")return`Your royalty for <strong>"${r.book_title}"</strong> is <strong>pending</strong> for ${r.royalty_period}. Reports are processed in the first 2 weeks of each quarter. You'll receive an email once ready.`;
+      return`Royalty for <strong>"${r.book_title}"</strong> hasn't been generated yet — the book is still in the publishing pipeline. Royalties begin once your book goes live.`;
+    case"isbn":return`Your ISBN for <strong>"${r.book_title}"</strong>:<br><br>📖 <strong><code>${r.isbn}</code></strong><br><br>This is registered with Amazon, Google Books, Flipkart, and all major retailers.`;
+    case"addon":if(!r.add_on_services.length)return`No add-on services are active for <strong>"${r.book_title}"</strong> yet.<br>We offer Bestseller Package, PR Campaigns, and Award Submissions. Email info@bookleafpub.com to learn more.`;
+      return`Active add-ons for <strong>"${r.book_title}"</strong>:<br><br>${r.add_on_services.map(s=>`✅ ${s}`).join("<br>")}`;
+    case"author_copy":return`Author copy status for <strong>"${r.book_title}"</strong>:<br><br>📦 ${r.author_copy_status}<br><br>For tracking queries, email dispatch@bookleafpub.com`;
+    case"submission":return`Publishing timeline for <strong>"${r.book_title}"</strong>:<br><br>📝 Submitted: <strong>${r.final_submission_date}</strong><br>📅 Expected Live: <strong>${r.book_live_date}</strong><br>🔖 Stage: ${r.publishing_stage}`;
+    case"dashboard":return`To access your author dashboard:<br><br>🔗 <strong>dashboard.bookleafpub.com</strong><br>📧 Login with: ${r.email}<br><br>Forgot password? Use the reset link or email support@bookleafpub.com`;
+    case"book_sales":return`Sales data for <strong>"${r.book_title}"</strong> is in your dashboard:<br><br>→ dashboard.bookleafpub.com → My Books → Sales Report<br><br>For quarterly reports email royalties@bookleafpub.com`;
+    default:return`Here's a quick summary for <strong>"${r.book_title}"</strong>:<br>📅 Submitted: ${r.final_submission_date}<br>📗 Live: ${r.book_live_date}<br>💰 Royalty: ${r.royalty_status}<br>📖 ISBN: ${r.isbn}<br><br>What specific information do you need?`;
+  }
+}
+
+function addMsg(html,role,meta){
+  const m=document.getElementById("messages");
+  const w=document.createElement("div");
+  w.className=`msg ${role}`;
+  const av=document.createElement("div");
+  av.className=`msg-av ${role==="bot"?"bot-av":"user-av"}`;
+  av.textContent=role==="bot"?"BL":"U";
+  const b=document.createElement("div");
+  b.className="bubble";
+  b.innerHTML=html;
+  if(meta&&meta.escalated){
+    const e=document.createElement("div");
+    e.className="escalate-notice";
+    e.innerHTML='⚠ Escalated to human support agent. Response within 24 hours.';
+    b.appendChild(e);
+  }
+  w.appendChild(av);
+  w.appendChild(b);
+  if(meta&&meta.confidence!=null){
+    const ml=document.createElement("div");ml.className="meta-line";
+    const pct=Math.round(meta.confidence*100);
+    const cls=pct>=80?"conf-high":pct>=60?"conf-mid":"conf-low";
+    ml.innerHTML=`<span class="conf-badge ${cls}">Confidence: ${pct}%</span>`;
+    const wrap=document.createElement("div");
+    wrap.appendChild(w);wrap.appendChild(ml);
+    m.appendChild(wrap);
+  }else{m.appendChild(w);}
+  m.scrollTop=m.scrollHeight;
+}
+
+let typing=null;
+function showTyping(){
+  const m=document.getElementById("messages");
+  const w=document.createElement("div");w.className="msg bot";w.id="typing";
+  const av=document.createElement("div");av.className="msg-av bot-av";av.textContent="BL";
+  const b=document.createElement("div");b.className="typing-bubble";
+  b.innerHTML='<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+  w.appendChild(av);w.appendChild(b);m.appendChild(w);m.scrollTop=m.scrollHeight;
+  typing=w;
+}
+function hideTyping(){if(typing){typing.remove();typing=null;}}
+
+function logEntry(q,intent,conf,esc){
+  LOGS.unshift({time:new Date().toLocaleTimeString("en-IN",{hour12:true,hour:"2-digit",minute:"2-digit"}),query:q,intent,confidence:Math.round(conf*100),escalated:esc});
+  document.getElementById("log-count").textContent=LOGS.length;
+  const lb=document.getElementById("log-body");
+  const tr=document.createElement("tr");
+  const cls=conf>=0.8?"p-green":conf>=0.6?"p-amber":"p-red";
+  tr.innerHTML=`<td>${LOGS[0].time}</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${q}</td><td><span class="pill p-blue">${intent}</span></td><td><span class="pill ${cls}">${Math.round(conf*100)}%</span></td><td><span class="pill ${esc?"p-amber":"p-green"}">${esc?"Yes":"No"}</span></td>`;
+  lb.prepend(tr);
+}
+
+async function send(){
+  const inp=document.getElementById("q");
+  const q=inp.value.trim();
+  if(!q)return;
+  inp.value="";
+  document.getElementById("sendbtn").disabled=true;
+  document.getElementById("chips").style.display="none";
+  addMsg(q,"user");
+  showTyping();
+  await new Promise(r=>setTimeout(r,700+Math.random()*500));
+  hideTyping();
+  const{intent,confidence}=classify(q);
+  const esc=confidence<0.8;
+  let resp;
+  // If low confidence or general query, try KB first
+  if(confidence<0.7||intent==="general"){
+    const kb=searchKB(q);
+    if(kb){
+      logEntry(q,"knowledge_base",0.85,false);
+      addMsg(kb.ans,"bot",{confidence:0.85,escalated:false});
+      document.getElementById("sendbtn").disabled=false;
+      inp.focus();
+      return;
+    }
+  }
+  resp=respond(intent,confidence,activeAuthor);
+  logEntry(q,intent,confidence,esc);
+  addMsg(resp,"bot",{confidence,escalated:esc});
+  document.getElementById("sendbtn").disabled=false;
+  inp.focus();
+}
+
+function ask(q){document.getElementById("q").value=q;send();}
+
+function setAuthor(id){
+  const a=DB.find(x=>x.id===id);
+  if(!a)return;
+  activeAuthor=a;
+  document.getElementById("h-name").textContent=a.name;
+  document.getElementById("h-book").textContent=a.book_title;
+  document.getElementById("h-avatar").textContent=a.name[0];
+  document.querySelectorAll(".author-card").forEach(c=>{
+    c.classList.toggle("active",c.dataset.id===id);
+  });
+  const m=document.getElementById("messages");
+  m.innerHTML="";
+  addMsg(`Switched to <strong>${a.name}</strong>'s profile — <em>${a.book_title}</em>. How can I help?`,"bot",null);
+}
+
+function showView(v){
+  document.getElementById("chat-panel").style.display=v==="chat"?"flex":"none";
+  document.getElementById("db-panel").style.display=v==="db"?"block":"none";
+  document.getElementById("log-panel").style.display=v==="log"?"block":"none";
+  document.querySelectorAll(".ha-btn").forEach((b,i)=>{
+    b.classList.toggle("active",["chat","db","log"][i]===v);
+  });
+}
+
+function buildSidebar(){
+  const list=document.getElementById("author-list");
+  DB.forEach(a=>{
+    const c=document.createElement("div");
+    c.className="author-card"+(a.id==="auth_001"?" active":"");
+    c.dataset.id=a.id;
+    c.innerHTML=`<div class="ac-name">${a.name}</div><div class="ac-book">${a.book_title}</div><span class="ac-badge ${a.publishing_stage==="Live"?"live":"processing"}">${a.publishing_stage}</span>`;
+    c.onclick=()=>setAuthor(a.id);
+    list.appendChild(c);
+  });
+}
+
+function buildDB(){
+  const tb=document.getElementById("db-body");
+  DB.forEach(r=>{
+    const live=r.book_live_date==="Processing"?`<span class="pill p-amber">Processing</span>`:r.book_live_date;
+    const royPill=r.royalty_status==="Paid"?`<span class="pill p-green">${r.royalty_status}</span>`:r.royalty_status==="Pending"?`<span class="pill p-amber">${r.royalty_status}</span>`:`<span class="pill p-red">${r.royalty_status}</span>`;
+    const addons=r.add_on_services.length?r.add_on_services.map(s=>`<span class="pill p-blue">${s}</span>`).join(" "):`<span class="pill p-gray">None</span>`;
+    tb.innerHTML+=`<tr><td style="font-size:11px">${r.email}</td><td><strong>${r.book_title}</strong></td><td style="font-family:'DM Mono',monospace;font-size:10px">${r.isbn}</td><td>${r.final_submission_date}</td><td>${live}</td><td>${royPill}${r.royalty_amount?`<br><span style="font-size:10px;color:var(--muted)">${r.royalty_amount}</span>`:""}</td><td>${addons}</td></tr>`;
+  });
+}
+
+buildSidebar();
+buildDB();
+addMsg(`Hello! I'm BookLeaf's AI support assistant 👋<br><br>I can help you with publishing timelines, royalty status, ISBNs, add-on services, and more.<br><br>Select an author from the sidebar or just ask me anything!`,"bot",null);
+</script>
+</body>
+</html>
