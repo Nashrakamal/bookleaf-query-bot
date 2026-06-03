@@ -231,7 +231,7 @@ const KB = [
   {kw:["acknowledgement","dedication","preface","blank pages"],ans:"Acknowledgement, Dedication, and Preface sections are mandatory and cannot be removed or renamed. If left empty, they'll appear as blank pages. Write at least a brief note in each."},
   {kw:["preview","finalize","finish submission","preview and finish"],ans:"Once done: click 'Preview and Finish' → review how your book looks in print → click 'Save and Continue' to proceed, or 'Back to Book Interior' to edit. You can still edit after preview by clicking 'Previous Step'."},
   // Cover Design
-  {kw:["cover design","cover creator","front cover","background","template","design cover"],ans:"Go to Dashboard → Cover Design → Background → Front to browse templates or upload a custom design (must be exactly 5×8 inches). Use a PC/laptop — mobile browsers are not supported for cover design."},
+  {kw:["cover design","cover creator","front cover","background","template","design cover","design my cover","how do i design","create cover"],ans:"Go to Dashboard → Cover Design → Background → Front to browse templates or upload a custom design (must be exactly 5×8 inches). Use a PC/laptop — mobile browsers are not supported for cover design."},
   {kw:["upload cover","custom cover","own cover","my own design"],ans:"Yes! Go to Cover Design → Background → Front → 'Click to upload an image'. Your custom cover must be exactly 5×8 inches. You can use your own fonts, colors, and layout."},
   {kw:["back cover","author bio","about author","back page","about the book"],ans:"Go to Cover Design → Text → Back. Add 'About the Book' (up to 60 words) and 'About the Author' (up to 60 words). Custom back cover image upload is not supported — only text and solid color backgrounds."},
   {kw:["profile photo","author photo","picture","author image"],ans:"In the Back Cover section, click 'Add Author Image' and upload your photo. Once uploaded, it cannot be removed — only replaced. If no image is uploaded, no placeholder appears in print."},
@@ -289,7 +289,7 @@ function classify(q){
     const s=v.kw.filter(w=>l.includes(w)).length;
     if(s>score){score=s;best=k;}
   }
-  const conf=score===0?0.4:Math.min(0.5+score*0.2,0.97);
+  const conf=score===0?0.4:Math.min(0.65+score*0.2,0.97);
   return{intent:best,confidence:conf};
 }
 
@@ -380,7 +380,7 @@ async function send(){
   const esc=confidence<0.8;
   let resp;
   // If low confidence or general query, try KB first
-  if(confidence<0.7||intent==="general"){
+  if(confidence<0.6||intent==="general"){
     const kb=searchKB(q);
     if(kb){
       logEntry(q,"knowledge_base",0.85,false);
