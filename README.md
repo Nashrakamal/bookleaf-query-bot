@@ -221,7 +221,4 @@ The system collects identity signals from different platforms and assigns confid
 
 ---
 
-## Contact
 
-Submission to: hr@bookleafpub.in
-CC: shivangiverma@bookleafpub.in, musavir@bookleafpub.in
